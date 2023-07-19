@@ -59,3 +59,167 @@ for 语句
 
 循环
 `for x in xList:`
+
+注意：遍历集合修改集合内容容易造成错误结果，应该便利集合副本（copy()）或创建新集合
+
+range() 函数
+
+用于遍历数字序列，可以生成算数级数，例如：
+`range(5)` '[0, 1, 2, 3, 4]'
+`range(5, 10)` '[5, 6, 7, 8, 9]'
+`range(0, 10, 3)` '[0, 3, 6, 9]'
+
+range() 迭代时基于所需序列返回连续项，并没有生成真实的列表，这种对象称为可迭代对象 `iterrable`
+
+break、continue、else 子句
+
+- break
+  - 跳出 for 或 while 循环
+- else
+  - 作用于循环语句，当循环全部循环完毕
+  - while 循环的条件为假时，执行该子句
+  - *break终止循环时，不执行*
+- continue
+  - 继续执行循环的下一次迭代
+
+pass 语句
+
+- 不执行任何操作
+- 语法上需要一个语句，但程序实际不执行任何动作
+- 用作函数或条件子句的占位符
+
+match 语句
+
+- 模式匹配，类似于 switch
+- 仅执行第一个匹配的模式
+- 可以将值提取到变量中
+
+```
+def http_error(status):
+    match status:
+        case 400:
+            return "Bad request"
+        case 404 | 401 | 403:
+            return "Not found"
+        case 418:
+            return "I'm a teapot"
+        case _:
+            return "Something's wrong with the internet"
+```
+
+- '_' 被作为通配符必定会匹配成功
+- '|' 可以组合多个字面值
+- 可以解包赋值，并被用于绑定变量
+
+
+*有一些难理解的知识点，后续再看下*
+
+### 函数
+
+定义
+
+```
+>>> def fib(n):
+...     """Print a Fibonacci series up to n."""
+...     a, b = 0, 1
+...     while a < n:
+...             print(a, end= ' ')
+...             a, b = b, a + b
+...     print()
+...
+>>> fib(100)
+```
+
+- `def` 关键字
+- 后面跟函数名与括号内的形参列表
+- 函数语句从下一行开始，并且必须缩进
+- 函数内的第一条语句是字符串时，该字符串就是文档字符串（docstring），用于在线文档生成
+- 函数变量查找顺序：局部符号表 -> 外层符号表 -> 全局符号表 -> 内置符号表
+- 调用函数时会将实际参数引入到函数的局部符号表中（实参是*按值调用*传递，即对象是引用）
+- `return` 语句返回函数的值，不带表达式参数时，返回 `None` 
+
+参数值
+
+1. 默认值参数
+`def ask_ok(prompt, retries=4, reminder='Please try again!'):`
+这样在传参时后两个可传可不传，不传使用默认值
+默认值在 *定义* 作用域里的函数定义中求值
+默认值只计算一次，当默认值为列表、字典或类实例等可变对象时，会产生不同结果
+
+2. 关键字参数
+`def parrot(voltage, state='a stiff', action='voom', type='Norwegian Blue'):`
+`kwarg=value` 形式的 关键字参数 也可用于调用函数
+调用方式：`parrot(voltage=1000000, action='VOOOOOM') `
+所有传递的关键字参数都必须匹配一个函数接受的参数
+非有序性
+不能对同一个参数多次赋值
+形参为`**name`形式，接收一个字典， 包含与函数中已定义形参对应之外的所有关键词参数
+形参为`*name`形式，接收一个元组，包含形参列表之外的位置参数
+
+3. 特殊参数
+默认情况下，参数可以按照位置或显示关键字传递给Python函数
+为确定参数项是仅按位置、按位置或关键字、仅按关键字传递，函数定义如下：
+`def f(pos1, pos2, /, pos_or_kwd, *, kwd1, kwd2):`
+'/'  和 '*' 可选
+
+- 位置或关键字参数
+  - 未使用 / 和 * 时，位置或关键字传递都可以
+  - / 表示其之前的形参都是位置参数，其顺序很重要
+  - '*' 标识其之后的形参都是关键字参数
+  - / 之后 和 '*' 之前的参数两者都可
+
+Lambda 表达式
+
+用于创建小巧的匿名函数
+`lambda a, b: a+b` 函数返回两个参数的和
+
+文档字符串
+
+- 第一行应为对对象用途的简短摘要
+- 大写字母开头，句点结尾
+- 多行时，第二行为空白行，后面的行可包含若干段落
+- 查看：fun_name.`__doc__`
+
+```
+>>> def my_function():
+...     """
+...     Do nothing, but document it.
+...
+...     No, really, it doesn't do anything.
+...     """
+...     pass
+```
+
+编码风格
+
+- 缩进，用 4 个空格，不要用 制表符
+- 换行，一行不要超过 79 个字符
+- 用空行分隔函数和类，以及函数内较大的代码块
+- 注释尽量单独一行
+- 使用文档字符串
+- 运算符前后使用空格
+- ...
+
+### 数据结构
+
+列表
+
+list 方法
+- list.append(x)
+- list.extend(iterable)
+- list.insert(i, x)
+- list.remove(x)
+- list.pop([i])
+- list.clear()
+- list.index(x[, start[, end]])
+- list.count(x)
+- list.sort(*, key=None, reverse=False)
+- list.reverse()
+- list.copy()
+
+list 应用
+
+- 有序数组
+- 栈
+- 队列（慢，插入头时）
+  
