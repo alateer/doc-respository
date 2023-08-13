@@ -201,3 +201,93 @@ tips: 对象的规则设置
 3. 只给自己设置了constructor， 则需要执行 super()
 
 初始化状态
+
+### React Hooks 组件化开发
+
+React组件分类
+
+- 函数组件
+
+- 类组件
+
+#### Hook函数概述
+
+- 基础 Hook
+  - useState  使用状态管理
+  - useEffect  使用周期函数
+  - useContext  使用上下文信息
+
+- 额外的 Hook
+  - useReducer
+  - useCallback
+  - useMemo
+
+
+
+#### useState
+
+官方建议：需要多个状态，就将`useState`执行多次即可
+```
+let [supNum, setSupNum] = useState(10),
+    [oppNum, setOppNum] = useState(5);
+```
+
+在 React18 中，我们基于 useState 创建出来的 “修改状态方法”，其执行是异步的
+原理：
+类组件中的 this.setState + 异步操作 + 更新队列
+
+flushSync（react-dom中的）会立即执行更新队列
+
+useState 自带了性能优化机制：
+- 每次修改状态值的时候，会比较新的值和旧的值（基于Object.is比较），一样，则不会修改状态，也不会更新视图
+
+
+#### useEffect
+
+在函数组件中，使用声明周期函数
+- useEffect(callback):
+  - 在第一次渲染完毕后，执行 callback，等价于 componentDidMount
+  - 在组件每一次更新完毕后，也会执行 callback，等价于 componentDidUpdate
+- useEffect(callback, []):
+  - 第一次渲染完毕后，执行 callback，之后组件更新不再渲染，等价于 componentDidMount
+- useEffect(callback, [依赖的状态（多个状态）]):
+  - 当依赖的状态（多个中的一个）发生改变时，也会触发 callback
+  - 都没有发生改变时，不会触发 callback
+- useEffect(callback(() => { return () => {} })):
+  - callback 里面存在函数时，会等上一个组件生命周期结束（组件被释放）时执行callback
+
+底层逻辑是使用一个 effect 链表（队列）
+
+useEffect 必须在函数的最外层上下文中调用，不能嵌入到条件判断、循环语句中
+可以在 callback 进行相关的语句判定
+
+useEffect 如果设置了返回值，则返回值必须是一个函数（代表组件在销毁时触发）
+可以在 callback 内部实现匿名函数或其他方式直接处理返回值，而不是将返回值作用到 callback 中
+
+- useLayoutEffect
+组件渲染步骤：
+1. 基于 react-app 编译
+2. 创建 virtualDOM
+3. DOM-DIFF 渲染为 真实DOM
+
+useEffect 会在第三步执行完之后再执行 effect 链表中的改变
+useLayoutEffect 则会再第二步执行完就执行 effect 链表中更新，然后再渲染真实DOM
+即：useLayoutEffect 会阻止浏览器渲染真实DOM，优先执行effect链表中的callback
+
+#### useRef 和 useImperativeHandle
+
+函数组件中使用Ref的方式
+- 基于“ref={函数}”的方式，可以把创建的DOM元素（或者子组件的实例）赋值给 box
+- 也可以基于 React.createRef 创建 ref对象来获取想要的内容
+- 基于 useRef Hook函数，创建一个ref对象（只能在函数组件中使用）
+
+useRef 和 createRef 
+- 前者只能用在函数组件，后者也可以用在类组件
+- 前者更新组件的时候，不会再创建新的REF对象，后者每一次更新都会重新创建一个Ref对象
+
+React.forwardRef 可以将一个函数组件作为一个 Ref 对象返回
+（正常的函数组件是不能调用另一个函数组件作为 Ref 对象的）
+
+useImperativeHandle
+
+获取Ref 子组件内部的状态和数据
