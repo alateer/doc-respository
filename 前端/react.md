@@ -291,3 +291,121 @@ React.forwardRef 可以将一个函数组件作为一个 Ref 对象返回
 useImperativeHandle
 
 获取Ref 子组件内部的状态和数据
+
+#### useMemo 和 useCallback
+
+函数组件的每一次更新，都是把函数重新执行一次
+- 内部重新产生一个闭包
+- -重新执行一次内部代码
+
+useMemo 备忘录
+
+对指定的状态指定其依赖的逻辑，只有这个状态改变时，对应的逻辑才会执行
+用法：useMemo(callback, [指定的状态列表])
+只有当指定的状态列表里面的状态发生改变时，才会执行callback
+
+- 第一次渲染时，callback会执行
+- callback的返回值会传递出来
+- useMemo具备缓存
+- 属于一个优化属性的Hook函数
+
+useCallback
+
+用法：useCallback(callback, [指定的状态列表])
+
+- 组件第一次渲染，useCallback会执行，创建一个callback函数
+- 组件后续的更新中，判断依赖的状态值是否改变，如果改变，则重新创建函数堆；如果没有改变，或状态列表为空，则始终使用第一次的callback函数堆
+- 基于useCallback，可以始终获取第一次创建的函数引用
+
+### 复合组件的通信方案
+
+复合组件：父子、祖先后代、兄弟、平行等组件间的组合
+
+父子组件通信方案：
+
+1. 以父组件为主导，基于“属性”实现通信（只有父组件可以调用子组件，将属性传递给子组件）
+2. 父组件基于属性“插槽”，可以将HTML结构传递给子组件
+3. 父组件把方法基于属性传递给子组件
+4. 父组件基于 ref 获取子组件实例（或子组件基于useImperativeHandle暴露数据和方法
+
+单向数据流
+
+1. 属性的传递方向是单向的
+
+2. 生命周期函数的延续
+
+- 第一次渲染
+  - 父 willMount -> 父 render
+  - 子 willMount -> 子 render -> 子 didMount
+  - 父 didMount
+
+- 组件更新
+  - 父 shouldUpdate -> 父 willUpdate -> 父 render
+  - 子 willReciveProps -> 子 shouldUpate -> 子 willUpdate -> 子 render -> 子 didUpdate
+  - 父 didUpdate
+
+
+方案二：上下文
+
+基于上下文对象中，提供的Provider组件，用来：
+- 向上下文中存储信息：状态和方法
+- 当祖先更新的时候，render重新执行，会将最新的状态值，再次存储到上下文对象中
+
+### 样式处理
+
+vue中，会基于 `scoped` 为组件设置样式私有化，但是 react中并没有这样的机制
+
+所以 react 存在一些样式私有化的处理方案
+
+#### 内联样式
+
+通过给组件写入内联样式，可以对组件的样式直接进行私有化处理
+但是不利于样式的复用，样式冗余、样式和结构混合不够优雅
+
+#### CSS样式表
+
+基于样式表、样式类名这样的方式，但是需要人为有意识的、有规范的避免样式冲突问题
+- 保证外层样式类名不冲突
+
+#### CSS Modules
+
+基于 CSS 的 Modules 实现样式私有化
+样式写在 xxx.module.css 文件中，不能用less/sass/stylus这样的预编译语言了
+
+CSS的规则都是全局的，任何一个样式规则，都对整个页面有效，产生局部作用于的唯一方法，就是使用一个独一无二的class名称
+
+#### ReactJSS
+
+一个工具包，'react-jss'，其内部存在创建css样式的方法：createUseStyles
+
+基于 createUseStyles，构建组件需要的样式，返回结果是一个自定义的Hook函数
+也是相当于js构建的css结构，会被预编译为相应的css，并且产生唯一的className，作为变量被使用
+相较于CSSModules，具有可动态化的形式（预编译）
+
+#### styled-components
+
+流行 CSS-IN-JS 的模式，即把CSS像JS一样写，styled-components就是这样一个插件
+
+### Redux
+
+redux/react-redux 也是实现组件之间通信的技术插件，不管任何类型的组件，都可以基于这种方案实现通信
+其实现的原理是： 基于公共状态管理
+
+redux 是 JS 应用的状态管理容器，提供可预测的状态管理
+
+相关的工具包：
+- react-redux
+- react toolkit
+- redux devtools
+
+真正的项目中，Redux 需要进行模块化拆分，即工程化
+
+- 按照模块，将 reducer 进行单独的管理，每个模块都有自己的reducer
+- 将各个模块的reducer都合并在一起，放在 store 中
+
+- 派发行为标识宏管理
+- actionCreator 对 action 进行同意创建和管理
+
+react-redux
+再react中便于使用redux
+
