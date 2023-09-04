@@ -102,6 +102,26 @@ h1, .special {
 `article > p {}`
 
 
+### 列表
 
+- border-bottom
 
+border 的下面
+`border-bottom: solid 1px #ca2100;`
+
+- background-color
+
+背景色
+
+- transition
+
+过渡
+让属性动画的改变持续一段时间，而不是立即生效
+`transition: height 200ms ease-in;`
+三者分别代表属性、延迟时间、延迟变化函数（贝塞斯曲线）
+
+- box-shadow
+
+在元素的框架上添加阴影效果
+`0 1px 2px rgba(0, 0, 0, 0.15);`
 

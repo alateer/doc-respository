@@ -42,7 +42,11 @@ export default defineConfig({
 })
 ```
 
-### 本地启动
+#### 本地启动
 
 `npm install`
 `npm run dev`
+
+#### 一些配置
+
+https://zh-hans.eslint.org/docs/latest/use/configure/configuration-files
