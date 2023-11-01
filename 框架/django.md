@@ -1,34 +1,4 @@
-### 任务系统
-
-#### 服务
-
-- view
-展示层，主要用于前端的页面数据展示
-
-
-#### 表
-
-- task
-
-- id
-- name
-- description
-- status
-- start_time
-- end_time
-
-#### api
-
-- 增
-
-- 删
-
-- 改
-
-- 查
-
-
-### 一些命令
+### 相关命令
 #### 创建项目
 
 `django-admin startproject mysite`

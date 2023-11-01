@@ -131,7 +131,13 @@ border 的下面
 设置元素是否被视为块或者内联元素以及用于子元素的布局
 
 block：产生一个块级元素盒，在正常的流中，该元素之前和之后产生换行
+- 块级元素，独占一行，不设置自己宽高的情况下，块级元素会默认填满父级的宽度
+- 可以更改height和width
+- 可以设置padding、margin，top、left等也可以产生边距效果
 inline： 生成一个或多个内联元素盒，不会产生换行
+- 使元素变成行内元素，可以与其他行内元素共享一行
+- 不能更改元素的height、width值，大小由内容撑开
+- 可以使用padding上下左右都生效，margin只有left和right产生边距效果
 
 
 - hight & width
@@ -164,8 +170,6 @@ inline： 生成一个或多个内联元素盒，不会产生换行
 flexbox 和 css 网格布局支持该属性，控制轴上项目的对其方式
 center：元素在侧轴（竖向）居中，如果元素在侧轴上的高度高于其容器，那么在两个方向上溢出距离相同。
 
-
-
 - box-sizing
 
 定义了 user agent 应该如何计算一个元素的总宽度和总高度
@@ -174,3 +178,25 @@ content-box：默认值，只会设置内容区的宽高
 border-box：边框和内边距都会包含在宽高中
 border-box不包含margin
 
+- font-*
+
+1. font-family
+
+允许通过给定一个有先后顺序的，由字体名或者字体族名组成的列表来为选定的元素设置字体
+示例：
+`font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;`
+
+2. font-size
+
+指定字体大小
+
+3. font-style
+
+允许选择样式
+normal：默认常规字体
+italic：斜体
+oblique： 斜体
+
+4. font-weight
+
+字体粗细程度，一般是normal 和 bold 和 lighter等
