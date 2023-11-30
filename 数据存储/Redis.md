@@ -1,12 +1,6 @@
 ## Redis
 
-
-
 ### NoSQL
-
-redis 是一个为解决性能问题而产生的nosql数据库
-
-集群会存在session共享问题
 
 NoSQL，not only sql ，泛指非关系型数据库
 
@@ -15,10 +9,11 @@ NoSQL，not only sql ，泛指非关系型数据库
 常见：Redis、MongoDB、HBase
 
 
+### 数据类型
 
 #### Redis 键
 
-key *   获取当前库的所有key值
+`key *`   获取当前库的所有key值
 
 set key value  
 
@@ -235,31 +230,6 @@ subscribe channel1
 打开另一个客户端，订阅一个频道
 
 publish channel1 hello
-
-
-
-### SpringBoot整合Redis
-
-1. 引依赖
-
-```xml
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-data-redis</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-pool2</artifactId>
-            <version>2.6.0</version>
-        </dependency>
-```
-
-2. 配置
-
-3. 配置文件
-4. 实例
-
 
 
 ### Redis 事务
@@ -696,3 +666,344 @@ cluster-node-time  超时时间
 删除操作缺乏原子性
 
 解决方案：使用Lua脚本
+
+## Redis
+
+#### 缓存的基本思想
+
++ 缓存可以提高系统性能以及减少请求响应事件
++ 基本思想：**空间换时间**
++ 缓存的实际应用：如CPU Cache 缓存的内存数据用于解决 CPU 处理速度与内存不匹配的问题；内存缓存是硬盘数据用于解决硬盘访问速度过慢的问题；还有操作系统中在页表方案的基础上引入了快表来加速虚拟地址到物理地址的转换（可以把快表理解为一种特殊的高速缓冲存储器）
++ 我们为了避免用户在请求数据的时候获取速度过于缓慢，所以我们在数据库之上增加了缓存这一层来弥补
+
+#### 使用缓存为系统带来的问题
+
+引入本地缓存来做简单业务场景的化，实际代价几乎可以忽略，主要针对分布式缓存来说
+
++ **系统复杂性增加**：引入缓存后，要维持缓存和数据库的数据一致性，维护热点缓存等
++ **系统开发成本增加**：引入缓存意味着要一个单独的缓存服务，需要花费相应的成本
+
+#### 本地缓存解决方案
+
+> 本地缓存在实际的很多项目中用到， 特别是在单体架构时，数据量不大，并且无分布式要求
+>
+> 常见的单体架构使用 Nginx 来做负载均衡，部署到两个相同的服务到服务器，两个服务器使用同一个数据库，并且使用本地缓存
+
++ JDK 自带的 HashMap 和 ConcurrentHashMap
+
+两者都存放 key/value 形式的键值对，但大部分场景下都不会使用这两种作为缓存，因为一个稍微完善一点的缓存框架至少要提供：过期时间、淘汰机制、命中率这三点
+
++ **Ehcache、Guava Cache、Spring Cache** 
+
+Ehcache 相较于其他两者更加重量，但 Ehcache 支持可以嵌入到 hibernate 和 mybatis 中作为多级缓存，并且可以将缓存数据持久化到本地磁盘中，同时提供了集群方案（鸡肋)
+
+Guava 相比于 Spring Cache 的话使用的更多一点，他提供了 API 非常方便我们使用，同时也提供了设置缓存有效时间的功能，并且内部实现比较干净
+
+使用 Spring Cache 的注解实现缓存的话，代码干净和优雅，但容易出现问题，比如缓存穿透和内存溢出
+
++ 后起之秀 **Caffeine**
+
+相比于Guava，Caffeine 在各个方面（比如性能）要更加优秀，一般建议用来代替Guava
+
+#### 为什么要有分布式缓存？/为什么不直接用本地缓存
+
+我们可以把分布式缓存（Distributed Cache）看作是一种内存数据库的服务，它的最终作用就是提供缓存数据服务
+
+使用分布式缓存后，缓存部署在一台单独的服务器上，即使同一个相同的服务部署在再多机器上，也是使用的同一份缓存，并且，单独的分布式缓存服务到性能、容量和提供的功能都要更加强大
+
+缺点是要引入单独的服务
+
+#### 缓存读写模式/更新策略
+
+介绍三种模式，各有优劣，不存在最佳模式，根据具体的业务场景选择合适自己的缓存读取模式
+
++ Cache Aside Pattern（旁路缓存模型）
+
+写：更新DB，然后直接删除 cache
+
+读：从 cache 中读取数据，读取到就直接返回，读取不到，就从 DB 中取数据返回，并放到cache中
+
+结果以 DB 的结果为准
+
++ Read/Write Through Pattern（读写穿透）
+
+写：先查cache，cache中不存在，直接更新DB，cache中存在，则先更新cache，然后cache服务自己更新DB（同步更新 cache 和 DB）
+
+读：从cache中读取数据，读取到就直接返回，读取不到的话，先从DB加载，写入到cache后返回相应
+
++ Write Behind Pattern（异步缓存写入）
+
+Read/Write Through 是同步更新 cache 和 DB，而 Write Behind 则只是更新缓存，不直接更新DB，而是改为异步批量的方式来更新 DB
+
+Write Behind Pattern 下的写性能非常高，尤其适合一些数据经常变化的业务场景比如说一篇文章的点赞数量，阅读数量等
+
+#### Redis介绍
+
+Redis 是一个使用C语言开发的数据库，其数据存储在内存中，读写速度非常快
+
+应用方向：主要用于缓存，也用来做分布式锁，甚至是消息队列
+
+Redis提供多种数据类型来支持不同的业务场景，支持事务，持久化，Lua 脚本，多种集群方案
+
+#### 分布式缓存常见的技术选型方案
+
+使用的比较多的主要是 Memcached 和 Redis，不过，现在基本都是直接用 Redis了
+
+#### Redis 和 Memcached 的区别
+
++ **Redis 支持更丰富的数据类型（或者说更复杂的应用场景）**。Redis不仅支持简单的 k/v类型数据，还提供list，set，zset，hash等数据结构，而Memcached 只支持简单的 k/v 
++ **Redis支持数据的持久化**，可以将内存中的数据保持到磁盘中，重启后还可以再次加载进行使用，而 Memcached 将所有数据都存在内存中
++ **Redis 有灾难恢复机制**。因为支持数据的持久化
++ Redis在服务器内存使用完之后，可以将不用的数据放到磁盘上，但 Memcached 在服务器内存使用完之后，会直接报异常
++ Memcached 没有原生的集群模式，需要依靠客户端来实现往集群中分片写入数据；但 Redis 目前是支持原生 cluster 模式的
++ Memcached 是多线程，非阻塞 IO 复用的网络模型；Redis 使用单线程的多路IO复用模型
++ Redis支持发布订阅模型，Lua 脚本，事务，多编程语言等功能，Memcached不支持
++ Memcached 过期数据的删除策略只用了惰性删除，而Redis同时使用了惰性删除和定期删除
+
+#### 为什么要用Redis
+
++ 高性能
+
+保证用户下一次再访问这些数据的时候可以直接从缓存中获取，操作缓存就是直接操作内存
+
++ 高并发
+
+一般MySQL的QPS（每秒查询次数）大概在1w左右（4核8g），而使用Redis之后很容易达到10w+，最高甚至能达到30w+
+
+#### Redis常见数据结构及使用场景分析
+
+Redis官方提供在线环境：https://try.redis.io/
+
++ string
+
+string数据结构是简单的key-value类型，没有使用C的字符串表示，而是自己构建了一种 简单动态字符串。相比于C的字符串，Redis 的string 可以保持文本数据和二进制数据，并且获取字符串长度的复杂度是O（1），另外该API 是安全的，不会造成缓冲区溢出
+
+常用命令：set,get,strlen,exists,dect,incr,setex等等
+
+应用场景：用于需要计数的场景，比如用户的访问次数、热点文章的点赞转发数量等
+
+```sql
+set key value #设置 key-value 类型的值
+get key # 根据 key 获得对应的 value
+exists key  # 判断某个 key 是否存在
+strlen key # 返回 key 所储存的字符串值的长度。
+del key # 删除某个 key 对应的值
+get key
+# 批量设置-----------------------------------
+mset key1 value1 key2 value2 # 批量设置 key-value 类型的值
+mget key1 key2 # 批量获取多个 key 对应的 value
+# 计数器（字符串的内容为整数的时候使用）-----------------------
+set number 1
+incr number # 将 key 中储存的数字值增一
+get number
+decr number # 将 key 中储存的数字值减一
+get number
+# 过期---------------------------------------
+expire key  60 # 数据在 60s 后过期
+setex key 60 value # 数据在 60s 后过期 (setex:[set] + [ex]pire)
+ttl key # 查看数据还有多久过期
+```
+
++ list
+
+list 是 链表，特点是易于插入和删除，不易随机访问。Reids 的 list 实现是一个 双向链表
+
+常用命令：rpush,lpop,lpush,rpop,lrange,llen等（r 和 l 分别代表右，左）
+
+应用场景：发布与订阅或者或消息队列、慢查询
+
+```mysql
+---------通过rpush/lpop 实现队列-----------
+rpush myList value1 # 向 list 的头部（右边）添加元素
+rpush myList value2 value3 # 向list的头部（最右边）添加多个元素
+lpop myList # 将 list的尾部(最左边)元素取出
+lrange myList 0 1 # 查看对应下标的list列表， 0 为 start,1为 end
+lrange myList 0 -1 # 查看列表中的所有元素，-1表示倒数第一
+# lrange命令可以实现分页查询，性能非常高
+---------通过rpush/rpop 实现栈-----------
+rpush myList2 value1 value2 value3
+rpop myList2 # 将 list的头部(最右边)元素取出
+# llen 查看链表长度
+llen myList
+```
+
++ hash
+
+hash 类似于 JDK1.8以前的HashMap，内部实现差不多（数组+链表）。另外，hash是一个string 类型的field 和 value 的映射表，特别适合存储对象，操作时，直接仅仅修改对象的某个字段的值
+
+常用命令：hset,hmset,hexists,hget,hgetall,hkeys,,hvals等
+
+应用场景：系统中对象数据的存储，用户信息，商品信息等
+
+```sql
+127.0.0.1:6379> hset userInfoKey name "guide" description "dev" age "24"
+OK
+127.0.0.1:6379> hexists userInfoKey name # 查看 key 对应的 value中指定的字段是否存在。
+(integer) 1
+127.0.0.1:6379> hget userInfoKey name # 获取存储在哈希表中指定字段的值。
+"guide"
+127.0.0.1:6379> hget userInfoKey age
+"24"
+127.0.0.1:6379> hgetall userInfoKey # 获取在哈希表中指定 key 的所有字段和值
+1) "name"
+2) "guide"
+3) "description"
+4) "dev"
+5) "age"
+6) "24"
+127.0.0.1:6379> hkeys userInfoKey # 获取 key 列表
+1) "name"
+2) "description"
+3) "age"
+127.0.0.1:6379> hvals userInfoKey # 获取 value 列表
+1) "guide"
+2) "dev"
+3) "24"
+127.0.0.1:6379> hset userInfoKey name "GuideGeGe" # 修改某个字段对应的值
+127.0.0.1:6379> hget userInfoKey name
+"GuideGeGe"
+```
+
++ set
+
+类似于 HashSet ，无序，无重复数据，提供了判断某个成员是否在一个 set 集合内的重要接口，可以基于set轻易实现交集，并集，差集的操作
+
+常用命令：sadd,spop,smembers,sismember,scard,sinterstore,sunion等
+
+应用场景：存放的数据不能重复且需要获取多个数据源交集和并集的场景
+
+```sql
+127.0.0.1:6379> sadd mySet value1 value2 # 添加元素进去
+(integer) 2
+127.0.0.1:6379> sadd mySet value1 # 不允许有重复元素
+(integer) 0
+127.0.0.1:6379> smembers mySet # 查看 set 中所有的元素
+1) "value1"
+2) "value2"
+127.0.0.1:6379> scard mySet # 查看 set 的长度
+(integer) 2
+127.0.0.1:6379> sismember mySet value1 # 检查某个元素是否存在set 中，只能接收单个元素
+(integer) 1
+127.0.0.1:6379> sadd mySet2 value2 value3
+(integer) 2
+127.0.0.1:6379> sinterstore mySet3 mySet mySet2 #获取mySet和mySet2的交集存放mySet3中
+(integer) 1
+127.0.0.1:6379> smembers mySet3
+1) "value2"
+```
+
++ sorted set
+
+和set 相比，sorted set 增加了一个权重参数score，使得集合中的元素可以按照 score 进行有序排序，还可以通过 score 的范围来获取元素的列表
+
+常用命令：zadd,zcard,zscore,zrange,zrevrange,zrem等
+
+应用场景：需要对数据根据权重进行排序的场景，如礼物排行榜等z
+
+```sql
+127.0.0.1:6379> zadd myZset 3.0 value1 # 添加元素到 sorted set 中 3.0 为权重
+(integer) 1
+127.0.0.1:6379> zadd myZset 2.0 value2 1.0 value3 # 一次添加多个元素
+(integer) 2
+127.0.0.1:6379> zcard myZset # 查看 sorted set 中的元素数量
+(integer) 3
+127.0.0.1:6379> zscore myZset value1 # 查看某个 value 的权重
+"3"
+127.0.0.1:6379> zrange  myZset 0 -1 # 顺序输出某个范围区间的元素，0 -1表示输出所有元素
+1) "value3"
+2) "value2"
+3) "value1"
+127.0.0.1:6379> zrange  myZset 0 1 # 顺序输出某个范围区间的元素，0为 start 1为stop
+1) "value3"
+2) "value2"
+127.0.0.1:6379> zrevrange  myZset 0 1 # 逆序输出某个范围区间的元素，0为start 1为stop
+1) "value1"
+2) "value2"
+```
+
+#### Redis 单线程模型详解
+
+Redis 是基于 Reactor 模式来设计开发了自己的一套高效的事件处理模型（Netty 的线程模型也是基于 Reactor 模式）
+
+Redis 通过IO 多路复用程序来监听来自客户端的大量连接
+
+I/O多路复用技术的使用让 Redis 不需要额外的多余线程来监听客户端的大量连接，降低了资源消耗
+
+#### Redis 给缓存数据设置过期时间的作用
+
+内存是有限的，如果缓存中所有的数据都一直保存的话，分分钟直接OOM
+
+某些业务场景需要某个数据只在某一段时间内存在，如短信验证码，用户登录的token
+
+#### 过期数据的删除策略
+
++ 惰性删除
+
+只会在取出key的时候才会对数据进行过期检查，这样对CPU好，但可能造成太多过期key没被删
+
++ 定期删除
+
+每隔一段时间抽取一批 key 执行删除过期key操作，对内存更加友好，故Redis采用两种方式结合
+
+#### Redis 内存淘汰机制
+
+如何保证 Redis 中的数据都是热点数据，提供了多种数据淘汰策略
+
++ volatile-lru：从已设置过期时间的数据集中挑选最近最少使用的数据淘汰
++ volatile-ttl：从已设置过期时间的数据集中挑选将要过期的数据淘汰
++ volatile-random：从已设置过期时间的数据集中任意挑选数据淘汰
++ allkeys-lru：当内存不足以容纳新写入数据时，在键空间中，移除最近最少使用的key（常用）
++ allkeys-random：从数据集中任意选择数据淘汰
++ no-eviction：禁止驱逐数据，内存不够容纳新写入数据时，新写入数据操作会报错（不用）
+
+4.0版本后新增
+
++ volatile-lfu:从已设置过期时间的数据集中挑选最不经常使用的数据淘汰
++ allkeys-lfu：当内存不足以容纳新写入数据时，在键空间中，移除最不经常使用的key
+
+#### Redis 持久化机制
+
+两种方式：快照 和 只追加文件
+
++ 快照（RDB）
+
+通过创建快照来获取存储在内存里面的数据在某个时间点上的副本
+
++ 只追加文件（AOF）
+
+每执行一条会修改 Redis 中数据的命令，Redis 就会将命令写入硬盘中的 AOF 文件
+
+4.0后开始支持 RDB 和 AOF 的混合持久化
+
+#### Redis 事务
+
+可以通过 MULTL，EXEC，DICARD 和 WATCH 等命令实现事务功能
+
+Redis 是不支持 roll back的，所以不满足原子性（也不满足持久性）
+
+Redis事务提供了一种将多个命令请求打包的功能。然后，再按顺序执行打包的所有命令，并且不会被中途打断
+
+#### 缓存穿透
+
+大量请求的 key 根本不存在于缓存上，导致请求直接到了数据库上，根本没有经过缓存这一层
+
+解决办法：
+
++ 做好参数校验，不合法的参数请求直接抛出异常信息，如id不能小于0，邮箱格式不对等
++ 缓存无效key：写一个无效的 key 到缓存中，设置过期时间
++ 布隆过滤器：某个元素存在，小概率会误判，某个元素不存在，那么一定不在
+
+#### 缓存雪崩
+
+缓存在同一时间大面积的失效，后面的请求都直接落到了数据库上，造成数据库短时间内承受大量请求
+
+一些被大量访问数据（热点缓存）在某一时刻大面积失效，导致对于请求直接落在数据库上
+
+解决方案：
+
++ 针对Redis 服务不可用情况
+  + 采用Redis集群，避免单机出现问题整个缓存服务都没办法使用
+  + 限流，避免同时处理大量请求
++ 针对热点缓存失效的情况
+  + 设置不同失效的时间比如随即设置缓存失效时间
+  + 缓存永不失效
