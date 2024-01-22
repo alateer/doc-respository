@@ -51,5 +51,57 @@ ES会为分片创建一份或多份拷贝，或者说复制
 搜索可以在复制上并行运行，可以提高吞吐量
 默认情况下，ES为每个索引分配5个主分片和1个复制
 
-### 下载启动
+### 安装
 
+1. 需要Java环境
+
+2. 下载二进制文件
+`www.elasticsearch.org/download`
+
+3. 解压并进入bin目录，启动节点和单节点集群
+`./elasticsearch` 或 双击 `elasticsearch.bat`
+或者可以覆盖默认的节点名称和集群名称：
+`./elasticsearch --cluster.name cluster_name --node.name node_name`
+
+4. 默认情况下，ElasticSearch通过9200端口提供对其Restful API的访问
+
+5. 通过 `localhost:9200` 来查看启动是否成功
+
+### 操作集群
+
+#### rest api 接口
+
+1. 查询集群、节点、索引的健康状态和相关的统计信息
+2. 管理集群、节点、索引数据和元数据
+3. 对索引进行 CRUD 和 搜索
+4. 高级查询，如分页、排序、过滤、脚本、聚合等等
+
+#### 健康
+
+查询集群健康：
+`localhost:9200/_cat/health?v`
+
+状态：
+- 绿色：一切正常
+- 黄色：数据都可用，但某些复制没有被分配
+- 红色：某些数据不可用
+
+查询节点列表：
+`localhost:9200/_cat/nodes?v`
+
+#### 所有索引
+
+`localhost:9200/_cat/indices?v`
+
+#### 创建索引
+
+PUT: `localhost:9200/customer?pretty`
+
+#### 索引并查询一个文档
+
+```
+curl -XPUT 'localhost:9200/customer/external/1?pretty' -d '
+{
+  "name": "John Doe"
+}'
+```
