@@ -44,6 +44,54 @@ Git是以文件快照的方式存储信息（存储信息的视角：一组不�
 已修改：内容修改，但未提交到数据库
 已暂存：对已修改的文件的当前版本做了标记，使之包含在提交中
 
+#### 安装
+
+官网：https://git-scm.com/
+下载网址：https://git-scm.com/downloads
+
+#### 配置
+
+命令：`git config`
+
+配置分三个优先级目录，级别之间进行覆盖
+1. `/etc/gitconfig`  通过携带参数`--system`来配置用户和仓库的通用配置
+2. `~/.gitconfig` 或  `~/.config/git/config` 只针对当前用户，通过参数 `--global` 来生效
+3. 当前仓库的`.git/config`文件下的配置，只针对当前仓库，通过 `--local` 来生效
+例如，配置用户信息和编辑器：
+```
+git config --global user.name "alateer"
+git config --blobal user.email xx@gmail.com
+git config --global core.editor="D:\code\vscode\bin\code"
+```
+
+命令：` git config --list --show-origin`
+
+显示配置信息及所在文件, `--show-origin` 会显示所有的三个级别
+
+#### 获取帮助
+
+命令：
+`git help <verb>`
+`git <verb> --help`
+
+
+### 基础
+
+#### 获取Git仓库
+
+1. 将尚未进行版本控制的本地目录转换为 Git 仓库
+命令： `git init`
+
+2. 从其他服务器 克隆 一个已存在的 Git 仓库
+命令： `git clone <url> <local-response-name>`
+
+
+#### 记录更新
+
+
+
+
+
 ### Git基本理论结构（核心）
 
 三个本地区域
