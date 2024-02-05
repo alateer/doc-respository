@@ -47,6 +47,7 @@ Git是以文件快照的方式存储信息（存储信息的视角：一组不�
 #### 安装
 
 官网：https://git-scm.com/
+
 下载网址：https://git-scm.com/downloads
 
 #### 配置
@@ -72,6 +73,7 @@ git config --global core.editor="D:\code\vscode\bin\code"
 
 命令：
 `git help <verb>`
+
 `git <verb> --help`
 
 
@@ -88,9 +90,29 @@ git config --global core.editor="D:\code\vscode\bin\code"
 
 #### 记录更新
 
+查看当前仓库的文件状态：`git status`
 
+跟踪/暂存文件命令：`git add <file | *> -s`
 
+仓库的文件状态变化周期
 
+- Untracked(未跟踪)： 
+
+意味着 Git 在之前的快照（提交）中没有这些文件，Git不会自动纳入跟踪范围
+
+- Unmodified(未修改) | Modified(已修改)
+
+当被追踪的文件被修改以后，文件的状态会成为Unmodified，通过暂存命令让修改的文件成为暂存状态
+
+- Stated(已暂存)
+
+通过`git add`后，文件会被放置在暂存区，暂存的当前所有修改的快照（暂存之后可以继续修改，但修改并不在暂存的版本里面）。每次的提交（commit）都是记录暂存区的结果
+
+忽略文件
+
+通过记录 `.gitignore` 文件来记录不进行跟踪的文件列表
+使用标准的 glob 模式来匹配文件
+一个仓库根目录下只需要有一个 `.gitignore` 文件，它递归地应用到整个仓库中
 
 ### Git基本理论结构（核心）
 
