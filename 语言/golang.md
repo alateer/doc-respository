@@ -4,8 +4,6 @@ The Go programming language
 
 Go is an open source programming language that makes it easy to build simple, reliable, and efficient software.
 
-目标：https://github.com/Qihoo360/poseidon
-
 - 链接
 
 官网：https://go.dev/
@@ -13,6 +11,12 @@ Github：https://github.com/golang/go
 二进制文件：https://go.dev/dl/、
 官方英文文档：https://go.dev/doc/
 官方包查询：https://pkg.go.dev/
+awesome-go：https://github.com/avelino/awesome-go
+golang开源项目：https://github.com/hackstoic/golang-open-source-projects
+中文版awesome：https://github.com/shockerli/go-awesome
+Gin 框架：https://gin-gonic.com/docs/
+OpenSCRM：https://github.com/openscrm/api-server?tab=readme-ov-file
+RxGo: https://github.com/ReactiveX/RxGo
 
 - 关键词
 
@@ -204,4 +208,314 @@ GOPATH（顶层目录）
 
 ### 多模块工作空间
 
-https://go.dev/doc/tutorial/workspaces
+可以在多个模块的构建代码工作空间，并管理运行和构建这多个模块
+
+- `go get <path>` 命令，可以获取将一个依赖导入到当前模块
+- `go work init <module_path>` 命令，创建一个`go.work`文件指定模块的工作空间，该模块会作为改工作空间的主模块
+- `go work use <module_path>` 命令，将一个模块增加到当前工作空间
+
+1. 创建一个工作空间目录，例如`xx-workspace`
+2. 在工作空间创建一个模块目录，初始化模块并编写模块代码
+3. 在工作空间目录通过`go work init <>`命令初始化模块的工作空间
+4. 在工作空间通过`go run <modole_path>`来运行模块
+5. 新创建一个模块，通过work use命令将新模块加入到工作空间
+6. 工作空间中的模块间可以进行跨模块的调用
+
+### 访问关系型数据库
+
+- 标准库包：`database/sql`
+- 包括连接数据库的种类和功能、执行约定、在程序中运行和启动等
+
+1. 创建并初始化一个数据库连接模块，来管理与数据库连接相关的依赖以及调用
+2. 在Mysql中创建数据表及填充数据
+   - 创建数据库：`create database <database_name>`
+   - 创建完成构建表和数据的`.sql`脚本文件
+   - 使用 `source <sql_file_path>` 命令将脚本文件导入到当前数据库（注意，在windows上，盘符为/，末尾不带分号）
+3. 查找并导入数据库驱动程序
+   - 该驱动程序会通过包中的函数发出的请求转换为数据库可以理解的请求
+   - 不同的数据库有不同的驱动程序，查找网址：`https://go.dev/wiki/SQLDrivers`
+   - 在模块中创建main程序，并设为main package，导入对应的驱动
+4. 获取数据库handler和连接
+   - 通过一个数据库handler来获取数据库连接
+   - 使用指向 sql.DB 结构的指针，表示对特定数据库的访问
+   - 配置数据库连接信息，并开启数据库，判断连接是否成功
+   - 使用 `go get .` 命令获取当前目录所需要的所有依赖
+   - 设置环境变量，便于数据库配置去获取（目前设置不生效，直接注释掉）
+   - 运行，返回连接成功即可
+5. 数据操作
+   - 定义数据库结构: `type <table_name> struct`
+   - 编写查询逻辑进行数据的查询
+   - 通过`db.Query("sql_statement")`查询多条数据
+   - 通过`db.QueryRow("sql_statement")`查询一条数据
+   - 通过 `defer rows.Close()` 来推迟关闭行源数据直到函数结束
+   - 通过 `Rows.Scan` 将 rows 中的数据 加入到定义的数据结构中
+   - Scan 会获取值的指针列表，通过 `&` 运算符可以将指针中的值传递到运算符对应的结构变量中，即通过指针写入来更新数据体结构
+   - 调用查询使用即可
+   - 数据操作包括查询、更新、删除、新增等
+6. 相关练习代码
+```go
+package main
+
+import (
+	"fmt"
+	"database/sql"
+	// "os"
+	"log"
+
+	"github.com/go-sql-driver/mysql"
+)
+
+var db *sql.DB // database handler, is global variable
+
+func main() {
+	cfg := mysql.Config {
+		// User: os.Getenv("DBUSER"),
+		// Passwd: os.Getenv("DBPASS"),
+		User: "root",
+		Passwd: "123456",
+		Net: "tcp",
+		Addr: "127.0.0.1:3306",
+		DBName: "recordings",
+	}
+
+	var err error
+	db, err = sql.Open("mysql", cfg.FormatDSN())
+	if err != nil {
+		log.Fatal(`Open error: %v`, err)
+	}
+
+	pingErr := db.Ping()
+	if pingErr != nil {
+		log.Fatal(`Ping error: %v`, pingErr)
+	}
+
+	fmt.Println("Connected!")
+
+	albums, err := albumsByArtist("John Coltrane")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("Albums found: %v\n", albums)
+
+	album, singleErr := albumByID(2)
+	if singleErr != nil { 
+		log.Fatal(singleErr)
+	}
+	fmt.Printf("Album found: %v\n", album)
+
+	albID, err := addAlbum(Album{
+		Title:  "The Modern Sound of Betty Carter",
+		Artist: "Betty Carter",
+		Price:  49.99,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("ID of added album: %v\n", albID)
+}
+
+type Album struct {
+	ID int64
+	Title string
+	Artist string
+	Price float32
+}
+
+func albumsByArtist(name string) ([]Album, error) {
+	var albums []Album
+
+	rows, err := db.Query("SELECT * FROM album WHERE artist = ?", name)
+	if err != nil {
+		return nil, fmt.Errorf("albumsByArtist %q: %v", name, err)
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		var alb Album
+		if err := rows.Scan(&alb.ID, &alb.Title, &alb.Artist, &alb.Price); err != nil {
+			return nil, fmt.Errorf("albumsByArtist %q: %v", name, err) 
+		}
+		albums = append(albums, alb)
+	}
+
+	if  err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("albumsByArtist %q: %v", name, err)
+	}
+
+	return albums, nil
+}
+
+func albumByID(id int64) (Album, error) {
+	var alb Album
+
+	row := db.QueryRow("select * from album where id = ?", id)
+	if err := row.Scan(&alb.ID, &alb.Title, &alb.Artist, &alb.Price); err != nil {
+		if err == sql.ErrNoRows {
+			return alb, fmt.Errorf("albumById %d: no such album", id)
+		}
+		return alb, fmt.Errorf("albumByID %q: %v", id, err)
+	}
+
+	return alb, nil
+}
+
+func addAlbum(alb Album) (int64, error) {
+	result, err := db.Exec("insert into album (title, artist, price) values (?, ?, ?)", alb.Title, alb.Artist, alb.Price)
+	if err != nil {
+		return 0, fmt.Errorf("addAlbum: %v", err)
+	}
+
+	id, err := result.LastInsertId()
+	if err != nil {
+		return 0, fmt.Errorf("addAlbum, %v", err)
+	}
+
+	return id, nil
+}
+```
+
+### 构建 RESTful API
+
+- 使用 GO 和 Gin Web框架编写一个RESTful风格的服务端API
+- Gin 简化了与构建web应用，包括web服务有关联的编码任务
+- 通过Gin路由请求，获取请求细节，并将返回体处理为JSON
+- 一个通用的API应该关联一个数据库
+
+1. 构建并初始化一个 web service 的模块
+2. 创建数据（数据库提供 或 JSON构建）
+3. 构建API
+   - 准备一个返回体结构
+   - 请求参数类型：`gin.Context`
+   - 请求返回体类型：`Context.IndentedJSON`，序列化json
+4. 配置路由
+   - 使用 `Default` 初始化 Gin router 
+   - 使用 `GET(<api_path>, <function>)` 来映射路径和调用函数
+   - 获取依赖
+   - 运行
+   - 请求api
+5. 相关练习代码
+
+```go
+package main
+
+import (
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+)
+
+type Album struct {
+	ID string `json:"id"`
+	Title string `json:"title"`
+	Artist string `json:"artist"`
+	Price float64 `json:"price"`
+}
+
+var albums = []Album {
+    {ID: "1", Title: "Blue Train", Artist: "John Coltrane", Price: 56.99},
+    {ID: "2", Title: "Jeru", Artist: "Gerry Mulligan", Price: 17.99},
+    {ID: "3", Title: "Sarah Vaughan and Clifford Brown", Artist: "Sarah Vaughan", Price: 39.99},
+}
+
+func main() {
+	router := gin.Default()
+	router.GET("/albums", getAlbums)
+	router.POST("/albums", postAlbums)
+	router.GET("/albums/:id", getAlbumByID)
+
+	router.Run("localhost:8080")
+}
+
+func getAlbums(c *gin.Context) {
+	c.IndentedJSON(http.StatusOK, albums)
+}
+
+func postAlbums(c *gin.Context) {
+	var newAlbum Album
+
+	if err := c.BindJSON(&newAlbum); err != nil {
+		return
+	}
+
+	albums = append(albums, newAlbum)
+	c.IndentedJSON(http.StatusCreated, newAlbum)
+}
+
+func getAlbumByID(c *gin.Context) {
+	id := c.Param("id")
+
+	for _, album := range albums {
+		if album.ID == id {
+			c.IndentedJSON(http.StatusOK, album)
+			return
+		}
+	}
+
+	c.IndentedJSON(http.StatusNotFound, gin.H{"message": "album not fount"})
+}
+
+```
+
+### 泛型（Generics）
+
+对于泛型，你可以在调用方写入类型集合的函数或类型中声明和使用
+
+定义泛型：`func func_name[K comparable, V int64 | float64](m map[K]V) V {}`
+调用泛型：`func_name<[string, int64]>(maps)`
+
+- 该泛型方法有两个类型参数，使用[]列出来
+- comparable 为可比较的类型约束，GO允许任何类型的值可用作比较运算
+- 通过 | 来处理允许返回的类型约束列表
+- 调用时类型约束列表可以省略
+
+声明类型约束：`type Number interface { int64 | float64 }`
+
+- interface 是一个统一的风格结构
+
+### 基础
+
+#### GO内置
+
+值类型
+
+- 布尔型：bool
+- 整型：int(32 or 64), int8, int16, int 32, int64
+- 无符号整型：uint(32 or 64), uint8, uint16, uint 32, uint64
+- 浮点型：float32, float64
+- 字符型：string
+- 复数：complex64, complex128
+- 固定长度数组：array
+
+引用类型（指针类型）
+
+- 序列（可变）数组：slice
+- 映射：map
+- 管道：chan
+
+函数（不需要导入）
+
+- 追加数组元素：append
+- 关闭channel：close
+- 删除map中key对应的value：delete
+- panic
+- recover
+- 返回complex实部：imag
+- 返回complex虚部：real
+- 分配内存（引用类型）：make
+- 分配内存（值类型）：new
+- 容量：cap
+- 复制连接slice：copy
+- 长度：len
+- 底层打印函数：print|println
+
+接口 error
+
+#### 主要函数
+
+init函数
+
+`init` 函数用于包（package）的初始化
+
+- 
