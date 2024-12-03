@@ -409,3 +409,7 @@ redux 是 JS 应用的状态管理容器，提供可预测的状态管理
 react-redux
 再react中便于使用redux
 
+
+### PropTypes
+
+https://www.freecodecamp.org/chinese/news/how-to-use-proptypes-in-react/
